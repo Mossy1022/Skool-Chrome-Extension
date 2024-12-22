@@ -1,27 +1,12 @@
 (function() {
   const TARGET_HOST = "www.skool.com";
   const PATH_PREFIX = "/reaction-channel-academy";
-  const SPOILER_API_BASE = "http://localhost:3000";
+  const SPOILER_API_BASE = "https://skool-chrome-extension.onrender.com";
 
   let isInitialized = false;
   let spoilerData = new Set(); // Initialize as a Set
   let imageObserver = null;
   let urlObserver = null;
-
-  // Example inline SVG icons
-  const eyeOpenSVG = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="16" height="16">
-      <path d="M32 16C18 16 6.5 25.5 0 40c6.5 14.5 18 24 32 24s25.5-9.5 32-24c-6.5-14.5-18-24-32-24z" fill="none" stroke="#333" stroke-width="4"/>
-      <circle cx="32" cy="40" r="8" fill="#333"/>
-    </svg>
-  `;
-  const eyeSlashSVG = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="16" height="16">
-      <path d="M8 20L56 60" fill="none" stroke="#333" stroke-width="4"/>
-      <path d="M32 16C18 16 6.5 25.5 0 40c6.5 14.5 18 24 32 24s25.5-9.5 32-24c-6.5-14.5-18-24-32-24z" fill="none" stroke="#333" stroke-width="4"/>
-      <circle cx="32" cy="40" r="8" fill="#333"/>
-    </svg>
-  `;
 
   /***********************************************************
    * Show a modal prompting the user to confirm or cancel.
@@ -186,31 +171,36 @@
       btn.classList.add("skool-spoiler-button");
       if (spoilerData.has(imageUrl)) { // Updated check
         img.classList.add("skool-spoiler-blurred");
-        btn.innerHTML = eyeOpenSVG;
+        btn.innerHTML = '<i class="fa-regular fa-eye"></i>';
       } else {
-        btn.innerHTML = eyeSlashSVG;
+        btn.innerHTML = '<i class="fa-regular fa-eye-slash"></i>';
       }
 
-      // 1) Find the main post container
-      const postContainer = img.closest(".styled__PostItemCardContent-sc-6yboky-1");
-      if (!postContainer) return;
+      // Find the post wrapper element
+      const postWrapper = img.closest(".styled__PostItemWrapper-sc-e4ns84-7.bdLLTH");
+      if (!postWrapper) return;
 
-      // 2) Check pinned
-      const pinnedBanner = postContainer.querySelector(".styled__PinnedPostBanner-sc-vh0utx-2.lictXL");
-      const isPinned = !!pinnedBanner;
+      // Check if the post wrapper contains a pinned banner
+      const hasPinnedBanner = postWrapper.querySelector(".styled__PinnedPostBanner-sc-vh0utx-2.lictXL");
 
-      // 3) Different row container for pinned vs non-pinned
-      let targetDiv = postContainer.querySelector(".styled__BoxWrapper-sc-z75ylc-0.bbCnni.styled__PreviewImageWrapper-sc-vh0utx-21.gUydVb");
+      // Adjust the button position dynamically based on whether a pinned banner exists
+      postWrapper.style.position = "relative";
+      btn.style.position = "absolute";
 
-
-      if (!targetDiv) {
-        console.log("[DEBUG] Could not find targetDiv for pinned =", isPinned);
-        return;
+      // Adjust the "top" or "bottom" value based on the pinned state
+      if (hasPinnedBanner) {
+        // If there's a pinned banner, position the button lower
+        btn.style.top = "50px"; // Adjust as needed
+        btn.style.right = "17px";
+      } else {
+        // No pinned banner, position the button closer to the top
+        btn.style.top = "15px"; // Adjust as needed
+        btn.style.right = "17px";
       }
 
-      // Position container so absolute button goes top-right
-      targetDiv.style.position = "relative";
-      targetDiv.appendChild(btn);
+      // Append the button to the post wrapper
+      postWrapper.appendChild(btn);
+
 
       // 4) Handle button click => show confirm, toggle spoiler
       btn.addEventListener("click", (e) => {
@@ -227,10 +217,10 @@
               const isSpoilerNow = await toggleSpoiler(imageUrl);
               if (isSpoilerNow) {
                 img.classList.add("skool-spoiler-blurred");
-                btn.innerHTML = eyeOpenSVG;
+                btn.innerHTML = '<i class="fa-regular fa-eye"></i>';
               } else {
                 img.classList.remove("skool-spoiler-blurred");
-                btn.innerHTML = eyeSlashSVG;
+                btn.innerHTML = '<i class="fa-regular fa-eye-slash"></i>';
               }
             } catch (err) {
               console.error("[ERROR] Confirm toggleSpoiler:", err);
@@ -244,6 +234,7 @@
     });
   }
 
+  
   function setupMutationObserver() {
     if (imageObserver) {
       imageObserver.disconnect();
@@ -315,19 +306,6 @@
     });
   }
 
-  function onUrlChange() {
-    if (!isOnReactionChannelAcademy()) {
-      if (isInitialized) {
-        cleanupExtension();
-        isInitialized = false;
-      }
-      return;
-    }
-    if (!isInitialized) {
-      initExtension();
-      isInitialized = true;
-    }
-  }
 
   function initialize() {
     watchUrlChanges();

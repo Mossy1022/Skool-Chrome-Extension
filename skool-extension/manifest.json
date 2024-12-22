@@ -1,29 +1,41 @@
 {
-    "name": "Skool Spoiler Image Blur",
+    "name": "RCA Skool Extension",
     "version": "1.0",
     "manifest_version": 3,
-    "description": "Allows users to mark images as spoilers on Skool.com.",
+    "description": "Allows users to mark images as spoilers, and future updates will include more features.",
     "permissions": [
-      "storage",
-      "activeTab",
-      "scripting"
+      "activeTab"
     ],
     "host_permissions": [
-      "https://www.skool.com/reaction-channel-academy*",
-      "http://localhost:3000/*"    
+      "https://www.skool.com/reaction-channel-academy*"    
     ],
+    "icons": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
     "content_scripts": [
       {
         "matches": ["https://www.skool.com/reaction-channel-academy*"],
         "js": ["content-script.js"],
-        "css": ["styles.css"],
+        "css": ["css/all.min.css","css/styles.css"],
         "run_at": "document_idle"
       }
     ],
-    "background": {
-      "service_worker": "background.js"
-    },
+    "web_accessible_resources": [
+      {
+        "resources": [
+          "webfonts/*",
+           "css/all.min.css"
+        ],
+        "matches": ["<all_urls>"]
+      }
+    ],
     "action": {
-      "default_popup": "popup.html"
+      "default_icon": {
+        "16": "icons/icon16.png",
+        "48": "icons/icon48.png",
+        "128": "icons/icon128.png"
+      }
     }
   }
