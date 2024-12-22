@@ -1,0 +1,29 @@
+{
+    "name": "Skool Spoiler Image Blur",
+    "version": "1.0",
+    "manifest_version": 3,
+    "description": "Allows users to mark images as spoilers on Skool.com.",
+    "permissions": [
+      "storage",
+      "activeTab",
+      "scripting"
+    ],
+    "host_permissions": [
+      "https://www.skool.com/reaction-channel-academy*",
+      "http://localhost:3000/*"    
+    ],
+    "content_scripts": [
+      {
+        "matches": ["https://www.skool.com/reaction-channel-academy*"],
+        "js": ["content-script.js"],
+        "css": ["styles.css"],
+        "run_at": "document_idle"
+      }
+    ],
+    "background": {
+      "service_worker": "background.js"
+    },
+    "action": {
+      "default_popup": "popup.html"
+    }
+  }
