@@ -3,9 +3,6 @@
     "version": "1.0",
     "manifest_version": 3,
     "description": "Allows users to mark images as spoilers, and future updates will include more features.",
-    "permissions": [
-      "activeTab"
-    ],
     "host_permissions": [
       "https://www.skool.com/reaction-channel-academy*"    
     ],
