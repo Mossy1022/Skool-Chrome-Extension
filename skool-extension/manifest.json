@@ -1,11 +1,18 @@
 {
     "name": "RCA Skool Extension",
-    "version": "1.0",
+    "version": "1.3",
     "manifest_version": 3,
     "description": "Allows users to mark images as spoilers, and future updates will include more features.",
     "host_permissions": [
       "https://www.skool.com/reaction-channel-academy*"    
     ],
+    "permissions": [
+      "tabs",
+      "storage"
+    ],
+    "background": {
+      "service_worker": "background.js"
+    },
     "icons": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",
@@ -22,7 +29,11 @@
     "web_accessible_resources": [
       {
         "resources": [
-          "webfonts/*",
+          "css/webfonts/*",
+          "css/webfonts/fa-regular-400.woff2",
+          "css/webfonts/fa-regular-400.ttf",
+          "css/webfonts/fa-solid-900.woff2",
+          "css/webfonts/fa-solid-900.ttf",
            "css/all.min.css"
         ],
         "matches": ["<all_urls>"]

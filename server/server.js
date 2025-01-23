@@ -72,6 +72,44 @@ app.post("/api/spoilers", async (req, res) => {
   }
 });
 
+// In your server.js (same pattern, just a different collection name)
+const usersCollection = db.collection("youtubeUsers"); // or "users"
+
+// GET /api/users => returns array of userIds like ["@evansoasis", "@someotherhandle"]
+app.get("/api/users", async (req, res) => {
+  try {
+    const users = await usersCollection.find({}).toArray();
+    const userIds = users.map(u => u.userId); // e.g., ["@evansoasis","@other"]
+    res.json(userIds);
+  } catch (err) {
+    console.error("Error fetching users:", err);
+    res.status(500).json({ error: "Failed to fetch user IDs" });
+  }
+});
+
+// POST /api/users => upserts user IDs from request body
+// expects { userIds: [ "@evansoasis", "@otherhandle" ] }
+app.post("/api/users", async (req, res) => {
+  const { userIds } = req.body;
+  if (!userIds || !Array.isArray(userIds)) {
+    return res.status(400).json({ error: "userIds array required" });
+  }
+
+  try {
+    for (const userId of userIds) {
+      await usersCollection.updateOne(
+        { userId },
+        { $setOnInsert: { userId } },
+        { upsert: true }
+      );
+    }
+    res.json({ message: "User IDs upserted successfully" });
+  } catch (err) {
+    console.error("Error upserting user IDs:", err);
+    res.status(500).json({ error: "Failed to upsert user IDs" });
+  }
+});
+
 // Handle undefined routes
 app.use((req, res) => {
   res.status(404).json({ error: "Endpoint not found" });

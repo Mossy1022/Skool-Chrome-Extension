@@ -1,4 +1,12 @@
 (function() {
+
+  // Inject FontAwesome CSS
+  const fontAwesomeCSS = chrome.runtime.getURL('css/all.min.css');
+  const linkElement = document.createElement('link');
+  linkElement.rel = 'stylesheet';
+  linkElement.href = fontAwesomeCSS;
+  document.head.appendChild(linkElement);
+  
   const TARGET_HOST = "www.skool.com";
   const PATH_PREFIX = "/reaction-channel-academy";
   const SPOILER_API_BASE = "https://skool-chrome-extension.onrender.com";
@@ -7,6 +15,15 @@
   let spoilerData = new Set(); // Initialize as a Set
   let imageObserver = null;
   let urlObserver = null;
+
+  // Check if we're on the correct page
+  function isOnReactionChannelAcademy() {
+    const url = new URL(window.location.href);
+    return (
+      url.hostname === TARGET_HOST &&
+      url.pathname.startsWith(PATH_PREFIX)
+    );
+  }
 
   /***********************************************************
    * Show a modal prompting the user to confirm or cancel.
@@ -74,28 +91,40 @@
 
   function onUrlChange() {
     if (!isOnReactionChannelAcademy()) {
+
+
       if (isInitialized) {
         cleanupExtension();
         isInitialized = false;
       }
       return;
     }
+
     if (!isInitialized) {
       initExtension();
       isInitialized = true;
     }
+
+     // Check for dynamic post overlays (e.g., modal pop-ups)
+     const postOverlay = document.querySelector('[data-post-id]');
+     if (postOverlay) {
+       console.log("Post overlay detected!");
+       injectUpdateUsersButton(); // Inject the "Update User IDs" button
+     }
+ 
+     // Handle specific post pages directly (e.g., /dont-mind-me-2)
+     if (window.location.href.includes("dont-mind-me-2")) {
+       injectUpdateUsersButton();
+     }
   }
 
   async function initExtension() {
-    console.log("[DEBUG] initExtension()");
     spoilerData = await fetchSpoilerData();
-    console.log("[DEBUG] Spoiler Data:", spoilerData);
     processImages();
     setupMutationObserver();
   }
 
   function cleanupExtension() {
-    console.log("[DEBUG] cleanupExtension()");
     document.querySelectorAll(".skool-spoiler-button").forEach((btn) => btn.remove());
     document.querySelectorAll(".skool-spoiler-blurred").forEach((img) => {
       img.classList.remove("skool-spoiler-blurred");
@@ -158,7 +187,6 @@
     if (!isInitialized) return;
 
     const images = document.querySelectorAll(".styled__PreviewImageWrapper-sc-vh0utx-21.gUydVb img");
-    console.log("[DEBUG] processImages() => found", images.length, "imgs");
 
     images.forEach((img) => {
       if (img.dataset.spoilerButton) return;
@@ -227,11 +255,229 @@
             }
           },
           () => {
-            console.log("[DEBUG] Canceled spoiler toggle");
           }
         );
       });
     });
+  }
+
+  // 1) Check if we’re on the specific post URL
+  function isOnDontMindMePost() {
+    return window.location.href.includes("dont-mind-me-2");
+  }
+
+  // 2) Gather user IDs from all comment spans
+  function getUserIdsFromComments() {
+    // In your screenshot, comments were inside a div with class "styled__Paragraph-sc-y5pp90-3 eHgPWw"
+    // containing a <span> with the @UserName. Adjust if necessary.
+    const commentSpans = document.querySelectorAll(".styled__Paragraph-sc-y5pp90-3.eHgPWw span");
+    const userIds = Array.from(commentSpans).map(span => span.textContent.trim());
+    // Optionally remove duplicates
+    return Array.from(new Set(userIds));
+  }
+
+  // 3) Create the “Update User IDs List” button
+  function createUpdateUsersButton() {
+    const button = document.createElement("button");
+    button.textContent = "Update User IDs List";
+    button.style.cursor = "pointer";
+    button.style.marginLeft = "8px";
+    button.style.padding = "6px 10px";
+    button.style.border = "1px solid #ccc";
+    button.style.borderRadius = "4px";
+    button.style.background = "#fff";
+    // Feel free to style more
+
+    // On click, gather user IDs & POST to your server
+    button.addEventListener("click", async () => {
+      const userIds = getUserIdsFromComments();
+      if (!userIds.length) {
+        alert("No user IDs found in the comments!");
+        return;
+      }
+
+      try {
+        const response = await fetch("https://skool-chrome-extension.onrender.com/api/users", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userIds })
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`);
+        }
+        const data = await response.json();
+        alert(`Server response: ${data.message}`);
+      } catch (err) {
+        console.error("Error updating user IDs:", err);
+        alert("Failed to update user IDs on server.");
+      }
+    });
+
+    return button;
+  }
+
+  function setupMutationObserver() {
+    // Observe the body for added nodes (e.g., post overlays)
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+          // Check if the post overlay is loaded
+          const postOverlay = document.querySelector(".styled__PostContent-sc-g7syap-11");
+          if (postOverlay) {
+            // Ensure the button is injected when the post overlay appears
+            injectUpdateUsersButton();
+          }
+        }
+      }
+    });
+  
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  // 4) Insert the new button next to the existing “Follow” button (or whichever button is in the post header)
+  function injectUpdateUsersButton() {
+  // Locate the parent container of the post header
+  const parentContainer = document.querySelector('.styled__PostDetailHeader-sc-g7syap-18');
+
+  if (!parentContainer) {
+    console.log("Parent container for the 'Update Users' button not found.");
+    return;
+  }
+
+  // Check if the button already exists to avoid duplicates
+  if (parentContainer.querySelector(".update-users-btn")) {
+    console.log("'Update Users' button already exists.");
+    return;
+  }
+
+  // Create the new "Update Users" button
+  const updateBtn = document.createElement("button");
+  updateBtn.textContent = "Update User IDs";
+  updateBtn.className = "update-users-btn";
+  updateBtn.style.cursor = "pointer";
+  updateBtn.style.marginLeft = "8px";
+  updateBtn.style.padding = "6px 10px";
+  updateBtn.style.border = "1px solid #ccc";
+  updateBtn.style.borderRadius = "4px";
+  updateBtn.style.background = "#fff";
+
+  // Add click functionality to fetch and send user IDs
+  updateBtn.addEventListener("click", async () => {
+    const userIds = getUserIdsFromComments();
+    if (!userIds.length) {
+      alert("No user IDs found in the comments!");
+      return;
+    }
+
+    try {
+      const response = await fetch("https://skool-chrome-extension.onrender.com/api/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userIds })
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+      const data = await response.json();
+      alert(`Server response: ${data.message}`);
+    } catch (err) {
+      console.error("Error updating user IDs:", err);
+      alert("Failed to update user IDs on server.");
+    }
+  });
+
+  // Append the new button to the parent container
+  parentContainer.appendChild(updateBtn);
+}
+
+  // 5) Run initialization: if on “dont-mind-me-2” page, inject the button
+  function init() {
+    if (isOnDontMindMePost()) {
+      injectUpdateUsersButton();
+    }
+    if (isOnReactionChannelAcademy()) {
+      injectSubscribeAllButton();  
+      // injectUpdateUsersButton(); (if you also want the “Update User IDs” button on this page)
+      // etc.
+    }
+  }
+
+  // If Skool is a single-page app, you might watch for URL changes. Otherwise, just run once:
+  document.addEventListener("DOMContentLoaded", init);
+  // Or simply call init() if you know the DOM is ready
+  init();
+
+
+  function createSubscribeAllButton() {
+    const button = document.createElement('button');
+    button.textContent = "Subscribe to All";
+    button.style.cursor = 'pointer';
+    button.style.padding = '8px 12px';
+    button.style.margin = '8px 0';
+    button.style.borderRadius = '4px';
+    button.style.backgroundColor = '#2196F3';
+    button.style.color = '#fff';
+    button.style.border = 'none';
+    button.style.width = '100%';  // Optional, if you want it to match the existing button’s full width
+  
+    // When clicked, fetch user IDs from your server and open them in batches
+    button.addEventListener('click', async () => {
+      try {
+        // 1) Fetch user IDs from your server
+        const resp = await fetch("https://skool-chrome-extension.onrender.com/api/users");
+        if (!resp.ok) {
+          throw new Error(`Failed to fetch user IDs. Status = ${resp.status}`);
+        }
+        const userIds = await resp.json(); // e.g. ["@evansoasis", "@someoneElse"]
+  
+        if (!userIds.length) {
+          alert("No user IDs found on the server!");
+          return;
+        }
+  
+        // 2) Ask how many at a time
+        const userBatchSize = prompt('How many users to open at once?', '10');
+        const batchSize = parseInt(userBatchSize, 10) || 10;
+  
+        // 3) Send them to the background script to open in batches
+        chrome.runtime.sendMessage({
+          action: 'openUsersInBatches',
+          payload: {
+            userIds,
+            batchSize
+          }
+        }, (response) => {
+          if (response && response.success) {
+            console.log('Batch opening started...');
+            if (response.message) {
+              alert(response.message); 
+            }
+          } else {
+            console.error('Failed to open user IDs in batches', response?.error);
+          }
+        });
+      } catch (err) {
+        console.error("Error fetching or opening user IDs:", err);
+        alert("Error fetching user IDs from server. Check console.");
+      }
+    });
+  
+    return button;
+  }
+
+  function injectSubscribeAllButton() {
+    // 1) Find the existing “highlighted” button in your screenshot
+    const existingBtn = document.querySelector('.styled__ButtonWrapper-sc-dscagy-1.kkQuiY');
+    if (!existingBtn) {
+      console.log("Could not find the existing side button to place our 'Subscribe to All' button.");
+      return;
+    }
+  
+    // 2) Create our new button
+    const subscribeBtn = createSubscribeAllButton();
+  
+    // 3) Insert it in the DOM right before the existing button
+    existingBtn.parentNode.insertBefore(subscribeBtn, existingBtn);
   }
 
   
@@ -246,7 +492,6 @@
           if (node.nodeType === Node.ELEMENT_NODE) {
             const newImgs = node.querySelectorAll(".styled__PreviewImageWrapper-sc-vh0utx-21.gUydVb img");
             if (newImgs.length > 0) {
-              console.log("[DEBUG] Found", newImgs.length, "new images in mutation");
               processImages();
             }
           }
@@ -261,6 +506,8 @@
     let timer;
 
     urlObserver = new MutationObserver(() => {
+      console.log("lastUrl1", lastUrl);
+      onUrlChange();
       const currentUrl = window.location.href;
       if (currentUrl !== lastUrl) {
         clearTimeout(timer);
@@ -313,4 +560,14 @@
   }
 
   initialize();
+
+   // Initialize the "Subscribe to All" button feature
+   function initBatchSubscribeFeature() {
+    if (isOnReactionChannelAcademy()) {
+      injectSubscribeAllButton();
+    }
+  }
+
+  // Ensure this is called after the DOM is loaded
+  document.addEventListener("DOMContentLoaded", initBatchSubscribeFeature);
 })();
