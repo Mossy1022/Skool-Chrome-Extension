@@ -1,7 +1,7 @@
-# RCA Academy Extension
+# RCA Extension
 
 ## Overview
-This project is a browser extension designed specifically for use with the RCA Academy platform hosted on `www.skool.com`. It provides tools and features tailored to enhance the user experience under the `reaction-channel-academy` path. The current version includes functionality for managing spoilers for images, but future updates will expand to include additional features.
+This project is a browser extension designed specifically for use with the RCA platform hosted on `www.skool.com`. It provides tools and features tailored to enhance the user experience under the `reaction-channel-academy` path. The current version includes functionality for managing spoilers for images, but future updates will expand to include additional features.
 
 ---
 
