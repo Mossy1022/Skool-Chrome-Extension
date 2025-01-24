@@ -268,10 +268,16 @@
 
   // 2) Gather user IDs from all comment spans
   function getUserIdsFromComments() {
-    // In your screenshot, comments were inside a div with class "styled__Paragraph-sc-y5pp90-3 eHgPWw"
-    // containing a <span> with the @UserName. Adjust if necessary.
-    const commentSpans = document.querySelectorAll(".styled__Paragraph-sc-y5pp90-3.eHgPWw span");
-    const userIds = Array.from(commentSpans).map(span => span.textContent.trim());
+    // Find all comment wrappers (only comments)
+    const commentBubbles = document.querySelectorAll('.styled__CommentItemBubble-sc-1lql1qn-3.eYiPqT');
+    
+    // Extract the user handles (@UserName) within each comment
+    const userIds = Array.from(commentBubbles).map(bubble => {
+      // Look for the specific paragraph element within the comment bubble
+      const paragraph = bubble.querySelector('.styled__Paragraph-sc-y5pp90-3.eHgPWw');
+      return paragraph ? paragraph.textContent.trim() : null;
+    }).filter(Boolean); // Remove any null or undefined results
+  
     // Optionally remove duplicates
     return Array.from(new Set(userIds));
   }
